@@ -1,0 +1,82 @@
+{
+  "project_info": {
+    "project_number": "1049501479506",
+    "project_id": "gigworker-11830",
+    "storage_bucket": "gigworker-11830.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1049501479506:android:65528047177d6229d4a58b",
+        "android_client_info": {
+          "package_name": "com.example.gigworker"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1049501479506-qj9o7h28goblkr0an924pk9u1388ncv2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC9GYX_xUn-uL20alOQE3r2nVJyr_h3aLk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1049501479506-qj9o7h28goblkr0an924pk9u1388ncv2.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1049501479506-i1q838jaoivrmvuq7bmb5m86a89hnop2.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.gigworker"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1049501479506:android:e7257fbfd6447797d4a58b",
+        "android_client_info": {
+          "package_name": "gig.worker"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1049501479506-qj9o7h28goblkr0an924pk9u1388ncv2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC9GYX_xUn-uL20alOQE3r2nVJyr_h3aLk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1049501479506-qj9o7h28goblkr0an924pk9u1388ncv2.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1049501479506-i1q838jaoivrmvuq7bmb5m86a89hnop2.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.gigworker"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
