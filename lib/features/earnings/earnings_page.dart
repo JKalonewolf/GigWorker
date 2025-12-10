@@ -96,7 +96,8 @@ class _EarningsPageState extends State<EarningsPage> {
         ).showSnackBar(const SnackBar(content: Text("Earning Added!")));
 
         // === TRIGGER NOTIFICATION ===
-        LocalNotificationService().showNotification(
+        print("Attempting to show notification..."); // Debug print
+        await LocalNotificationService().showNotification(
           id: DateTime.now().millisecond,
           title: 'Credit Alert 💰',
           body:

@@ -41,51 +41,47 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBTxld8QwyiAhAc52L4ngPod5uLCyNWe_8',
-    appId: '1:1049501479506:web:34069a643ef0b2cfd4a58b',
-    messagingSenderId: '1049501479506',
-    projectId: 'gigworker-11830',
-    authDomain: 'gigworker-11830.firebaseapp.com',
-    storageBucket: 'gigworker-11830.firebasestorage.app',
-    measurementId: 'G-RRSKV9XF67',
+    apiKey: 'AIzaSyDVHsr0d_IuMjm2YDnoB36MDidqoA1hhzY',
+    appId: '1:296240755283:web:f9d74c17f8547f4511cca6',
+    messagingSenderId: '296240755283',
+    projectId: 'financeflow-v43gz',
+    authDomain: 'financeflow-v43gz.firebaseapp.com',
+    storageBucket: 'financeflow-v43gz.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyC9GYX_xUn-uL20alOQE3r2nVJyr_h3aLk',
-    appId: '1:1049501479506:android:65528047177d6229d4a58b',
-    messagingSenderId: '1049501479506',
-    projectId: 'gigworker-11830',
-    storageBucket: 'gigworker-11830.firebasestorage.app',
+    apiKey: 'AIzaSyCfkOZDzzrZv0FBlbFSOgx0Blg2MEdWmBE',
+    appId: '1:296240755283:android:d7725158d8f10a3d11cca6',
+    messagingSenderId: '296240755283',
+    projectId: 'financeflow-v43gz',
+    storageBucket: 'financeflow-v43gz.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAbLq3NjNVcreH2nVrw-NT6GvW7qcheKQs',
-    appId: '1:1049501479506:ios:c5fe483ad907ab1dd4a58b',
-    messagingSenderId: '1049501479506',
-    projectId: 'gigworker-11830',
-    storageBucket: 'gigworker-11830.firebasestorage.app',
-    iosClientId: '1049501479506-i1q838jaoivrmvuq7bmb5m86a89hnop2.apps.googleusercontent.com',
+    apiKey: 'AIzaSyBI6k2LBk7OxArLuyno-mlLMWTtpMkDskM',
+    appId: '1:296240755283:ios:6045e62a5cbcd90611cca6',
+    messagingSenderId: '296240755283',
+    projectId: 'financeflow-v43gz',
+    storageBucket: 'financeflow-v43gz.firebasestorage.app',
     iosBundleId: 'com.example.gigworker',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyAbLq3NjNVcreH2nVrw-NT6GvW7qcheKQs',
-    appId: '1:1049501479506:ios:c5fe483ad907ab1dd4a58b',
-    messagingSenderId: '1049501479506',
-    projectId: 'gigworker-11830',
-    storageBucket: 'gigworker-11830.firebasestorage.app',
-    iosClientId: '1049501479506-i1q838jaoivrmvuq7bmb5m86a89hnop2.apps.googleusercontent.com',
+    apiKey: 'AIzaSyBI6k2LBk7OxArLuyno-mlLMWTtpMkDskM',
+    appId: '1:296240755283:ios:6045e62a5cbcd90611cca6',
+    messagingSenderId: '296240755283',
+    projectId: 'financeflow-v43gz',
+    storageBucket: 'financeflow-v43gz.firebasestorage.app',
     iosBundleId: 'com.example.gigworker',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyBTxld8QwyiAhAc52L4ngPod5uLCyNWe_8',
-    appId: '1:1049501479506:web:aba48adb6bf0af81d4a58b',
-    messagingSenderId: '1049501479506',
-    projectId: 'gigworker-11830',
-    authDomain: 'gigworker-11830.firebaseapp.com',
-    storageBucket: 'gigworker-11830.firebasestorage.app',
-    measurementId: 'G-K7BZFX00E4',
+    apiKey: 'AIzaSyDVHsr0d_IuMjm2YDnoB36MDidqoA1hhzY',
+    appId: '1:296240755283:web:ef9e7a6ab4de75bc11cca6',
+    messagingSenderId: '296240755283',
+    projectId: 'financeflow-v43gz',
+    authDomain: 'financeflow-v43gz.firebaseapp.com',
+    storageBucket: 'financeflow-v43gz.firebasestorage.app',
   );
 
 }
