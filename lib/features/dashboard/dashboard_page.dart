@@ -203,7 +203,7 @@ class DashboardPage extends StatelessWidget {
                             "Wallet balance",
                             style: TextStyle(color: Colors.white60),
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 3),
                           Text(
                             "₹ ${walletBalance.toStringAsFixed(0)}",
                             style: const TextStyle(
@@ -307,7 +307,7 @@ class DashboardPage extends StatelessWidget {
                 "Quick actions",
                 style: TextStyle(color: Colors.white70, fontSize: 15),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 5),
 
               Row(
                 children: [
@@ -372,10 +372,10 @@ class DashboardPage extends StatelessWidget {
                               Icons.attach_money,
                               color: Colors.orangeAccent,
                             ),
-                            SizedBox(width: 10),
+                            SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                "Add earnings",
+                                "Add Earnings\n Tab to See",
                                 style: TextStyle(
                                   color: Colors.white70,
                                   fontSize: 13,

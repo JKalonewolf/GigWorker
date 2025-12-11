@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:gigworker/features/auth/login_page.dart';
 import 'package:gigworker/models/user_model.dart';
 import 'package:gigworker/services/user_service.dart';
-
 import '../support/support_page.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -51,14 +50,15 @@ class _ProfilePageState extends State<ProfilePage> {
 
     setState(() => _saving = false);
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text("Profile updated")));
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Profile updated")));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // 🔐 IMPORTANT GUARD: if phoneNumber is empty, don't call Firestore
     if (widget.phoneNumber.isEmpty) {
       return Scaffold(
         backgroundColor: const Color(0xFF101010),
@@ -111,171 +111,209 @@ class _ProfilePageState extends State<ProfilePage> {
             _controllersInitialized = true;
           }
 
-          return Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                const SizedBox(height: 10),
-                const CircleAvatar(
-                  radius: 34,
-                  backgroundColor: Colors.white12,
-                  child: Icon(Icons.person, color: Colors.white, size: 36),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  user.name.isEmpty ? "New User" : user.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  "GigBank user",
-                  style: TextStyle(color: Colors.white54, fontSize: 13),
-                ),
+          // --- MODIFIED SECTION: SCROLLABLE LAYOUT ---
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                // Allows scrolling when content overflows (e.g., keyboard open)
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: ConstrainedBox(
+                  // Forces the content to be at least as tall as the screen
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    // Allows the Spacer() to work inside a ScrollView
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 10),
+                          const CircleAvatar(
+                            radius: 34,
+                            backgroundColor: Colors.white12,
+                            child: Icon(
+                              Icons.person,
+                              color: Colors.white,
+                              size: 36,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            user.name.isEmpty ? "New User" : user.name,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            "GigBank user",
+                            style: TextStyle(
+                              color: Colors.white54,
+                              fontSize: 13,
+                            ),
+                          ),
 
-                const SizedBox(height: 24),
-                _infoTile("Phone", user.phone, Icons.phone),
-                _infoTile("KYC status", user.kycStatus, Icons.verified_user),
-                _infoTile(
-                  "Wallet",
-                  "₹${user.walletBalance.toStringAsFixed(0)}",
-                  Icons.account_balance_wallet,
-                ),
+                          const SizedBox(height: 24),
+                          _infoTile("Phone", user.phone, Icons.phone),
+                          _infoTile(
+                            "KYC status",
+                            user.kycStatus,
+                            Icons.verified_user,
+                          ),
+                          _infoTile(
+                            "Wallet",
+                            "₹${user.walletBalance.toStringAsFixed(0)}",
+                            Icons.account_balance_wallet,
+                          ),
 
-                const SizedBox(height: 24),
+                          const SizedBox(height: 24),
 
-                // ----- EDITABLE NAME & CITY -----
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    "Edit Profile",
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _editField(
-                  label: "Full name",
-                  controller: _nameController,
-                  hint: "Enter your name",
-                ),
-                const SizedBox(height: 14),
-                _editField(
-                  label: "City",
-                  controller: _cityController,
-                  hint: "Enter your city",
-                ),
-                const SizedBox(height: 16),
-
-                // === SAVE BUTTON ===
-                GestureDetector(
-                  onTap: _saving ? null : _saveProfile,
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Colors.blueAccent, Colors.purpleAccent],
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: _saving
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
-                                ),
-                              ),
-                            )
-                          : const Text(
-                              "Save changes",
-                              style: TextStyle(
-                                color: Colors.white,
+                          // ----- EDITABLE NAME & CITY -----
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              "Edit Profile",
+                              style: const TextStyle(
+                                color: Colors.white70,
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                    ),
-                  ),
-                ),
+                          ),
+                          const SizedBox(height: 12),
+                          _editField(
+                            label: "Full name",
+                            controller: _nameController,
+                            hint: "Enter your name",
+                          ),
+                          const SizedBox(height: 14),
+                          _editField(
+                            label: "City",
+                            controller: _cityController,
+                            hint: "Enter your city",
+                          ),
+                          const SizedBox(height: 16),
 
-                const SizedBox(height: 12),
+                          // === SAVE BUTTON ===
+                          GestureDetector(
+                            onTap: _saving ? null : _saveProfile,
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Colors.blueAccent,
+                                    Colors.purpleAccent,
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Center(
+                                child: _saving
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
+                                        ),
+                                      )
+                                    : const Text(
+                                        "Save changes",
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ),
 
-                // === HELP & SUPPORT BUTTON (Correctly placed as a sibling) ===
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const SupportPage()),
-                    );
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF181818),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white24),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        "Help & Support",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
+                          const SizedBox(height: 12),
+
+                          // === HELP BUTTON ===
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const SupportPage(),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF181818),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.white24),
+                              ),
+                              child: const Center(
+                                child: Text(
+                                  "Help & Support",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          // This Spacer will push the Logout button to the bottom
+                          // IF there is screen space available.
+                          const Spacer(),
+                          const SizedBox(height: 20),
+
+                          // ----- LOGOUT -----
+                          GestureDetector(
+                            onTap: () async {
+                              await FirebaseAuth.instance.signOut();
+
+                              if (mounted) {
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const LoginPage(),
+                                  ),
+                                  (route) => false,
+                                );
+                              }
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              decoration: BoxDecoration(
+                                color: Colors.redAccent,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Center(
+                                child: Text(
+                                  "Logout",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
-
-                const Spacer(),
-
-                // ----- LOGOUT -----
-                GestureDetector(
-                  onTap: () async {
-                    await FirebaseAuth.instance.signOut();
-
-                    if (mounted) {
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(builder: (_) => const LoginPage()),
-                        (route) => false,
-                      );
-                    }
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    decoration: BoxDecoration(
-                      color: Colors.redAccent,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        "Logout",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              );
+            },
           );
         },
       ),

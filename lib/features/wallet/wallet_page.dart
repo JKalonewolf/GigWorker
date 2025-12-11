@@ -120,7 +120,7 @@ class _WalletPageState extends State<WalletPage> {
                               ),
                             );
                           },
-                          child: const Text("Add Money"),
+                          child: const Text("Deposit From Bank"),
                         ),
                       ],
                     ),
