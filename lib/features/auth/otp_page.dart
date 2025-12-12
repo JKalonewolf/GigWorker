@@ -1,11 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:gigworker/features/dashboard/dashboard_page.dart';
-import 'package:gigworker/services/user_service.dart';
+// Note: We don't need UserService anymore because we save directly here for better control
 
 class OtpPage extends StatefulWidget {
   final String mobile;
+  final String name; // 1. Added field to hold the name
 
-  const OtpPage({super.key, required this.mobile, required String name});
+  // 2. Updated constructor to accept 'this.name'
+  const OtpPage({super.key, required this.mobile, required this.name});
 
   @override
   State<OtpPage> createState() => _OtpPageState();
@@ -32,10 +35,20 @@ class _OtpPageState extends State<OtpPage> {
     if (!mounted) return;
 
     if (smsCode == _expectedOtp) {
-      // 🔹 create user in Firestore if new
-      await UserService().createUserIfNotExists(widget.mobile);
+      // 3. 🔹 SAVE NAME TO FIRESTORE DIRECTLY 🔹
+      // We use the mobile number as the Document ID so it matches everywhere
+      await FirebaseFirestore.instance.collection('users').doc(widget.mobile).set(
+        {
+          'name': widget.name, // <--- Saving the Name here
+          'phoneNumber': widget.mobile,
+          'createdAt': FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true),
+      ); // 'merge: true' ensures we don't delete wallet balance if user exists
 
       if (!mounted) return;
+
+      // Navigate to Dashboard
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(

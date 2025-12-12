@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:gigworker/models/loan_model.dart';
 import 'package:gigworker/services/loan_service.dart';
-import 'package:gigworker/services/local_notification_service.dart'; // IMPORT ADDED
+import 'package:gigworker/services/local_notification_service.dart';
 
 class LoanPage extends StatefulWidget {
   final String phoneNumber;
@@ -520,14 +520,47 @@ class _LoanPageState extends State<LoanPage> {
     );
   }
 
-  // ---------- LOGIC: CHECK ELIGIBILITY ----------
+  // ---------- LOGIC: CHECK ELIGIBILITY WITH KYC CHECK ----------
 
   Future<void> _onCheckEligibility() async {
-    // 1) Fetch last 30 days earnings
+    // 0) Check KYC Status First
     final userRef = FirebaseFirestore.instance
         .collection('users')
         .doc(widget.phoneNumber);
 
+    final userSnapshot = await userRef.get();
+    String kycStatus = "pending";
+    if (userSnapshot.exists) {
+      final data = userSnapshot.data() as Map<String, dynamic>;
+      kycStatus = (data['kycStatus'] ?? 'pending').toString();
+    }
+
+    // === ADDED LOGIC: PREVENT LOAN IF KYC NOT APPROVED ===
+    if (kycStatus.toLowerCase() != 'approved') {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF1E1E1E),
+          title: const Icon(Icons.lock, color: Colors.redAccent, size: 50),
+          content: const Text(
+            "KYC Approval Required\nYou cannot apply for a loan until your KYC is verified and approved by the admin.",
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("OK"),
+            ),
+          ],
+        ),
+      );
+      return; // Stop here
+    }
+    // ====================================================
+
+    // 1) Fetch last 30 days earnings
     final earningsSnap = await userRef
         .collection('earnings')
         .where(

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase Auth
 import 'package:gigworker/features/auth/register_page.dart';
 import 'package:gigworker/features/auth/otp_page.dart';
 import 'package:gigworker/features/dashboard/dashboard_page.dart';
+import 'package:gigworker/features/auth/forgot_password_page.dart'; // Ensure this is imported
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -55,7 +56,6 @@ class _LoginPageState extends State<LoginPage> {
 
         if (mounted) {
           // 3. Navigate to Dashboard with the UID
-          // We pass UID to 'phoneNumber' parameter because Dashboard uses it as Document ID
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => DashboardPage(phoneNumber: uid)),
@@ -73,30 +73,42 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  // --- LOGIC: FORGOT PASSWORD ---
-  Future<void> _handleForgotPassword() async {
-    final email = _emailController.text.trim();
-    if (email.isEmpty) {
+  // --- SEND OTP (Mobile) ---
+  Future<void> _sendOtp() async {
+    final name = _nameController.text.trim();
+    final mobile = _mobileController.text.trim();
+
+    // Validate Name
+    if (name.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text("Enter your email first")));
+      ).showSnackBar(const SnackBar(content: Text("Please enter your name")));
       return;
     }
 
-    try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Password reset email sent!")),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
-      }
+    // Validate Mobile
+    if (mobile.length != 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter valid 10-digit number")),
+      );
+      return;
     }
+
+    setState(() => _isLoading = true);
+
+    // Simulate network delay
+    await Future.delayed(const Duration(milliseconds: 700));
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    // Pass BOTH name and mobile to OTP page
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OtpPage(mobile: mobile, name: name),
+      ),
+    );
   }
 
   @override
@@ -275,7 +287,7 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  // ----------------- EMAIL LOGIN FORM (FIXED) -----------------
+  // ----------------- EMAIL LOGIN FORM -----------------
   Widget _buildEmailForm() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -313,7 +325,13 @@ class _LoginPageState extends State<LoginPage> {
         Align(
           alignment: Alignment.centerRight,
           child: TextButton(
-            onPressed: _handleForgotPassword, // FIXED: Now works
+            // --- UPDATED: Navigate to Forgot Password Page ---
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ForgotPasswordPage()),
+              );
+            },
             child: const Text(
               "Forgot password?",
               style: TextStyle(color: Colors.white60, fontSize: 13),
@@ -322,7 +340,6 @@ class _LoginPageState extends State<LoginPage> {
         ),
         const SizedBox(height: 8),
 
-        // FIXED: Calls _handleEmailLogin instead of dummy navigation
         _buildPrimaryButton(
           _isLoading ? "Logging in..." : "Login",
           onTap: _isLoading ? null : _handleEmailLogin,
@@ -384,44 +401,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
           ),
         ),
-      ),
-    );
-  }
-
-  // ----------------- SEND OTP (Mobile) -----------------
-  Future<void> _sendOtp() async {
-    final name = _nameController.text.trim();
-    final mobile = _mobileController.text.trim();
-
-    // Validate Name
-    if (name.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Please enter your name")));
-      return;
-    }
-
-    // Validate Mobile
-    if (mobile.length != 10) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter valid 10-digit number")),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 700));
-
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-
-    // Pass BOTH name and mobile to OTP page
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => OtpPage(mobile: mobile, name: name),
       ),
     );
   }

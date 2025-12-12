@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:gigworker/features/auth/login_page.dart';
 import 'package:gigworker/models/user_model.dart';
 import 'package:gigworker/services/user_service.dart';
-import '../support/support_page.dart';
+import 'package:gigworker/features/support/support_page.dart'; // Ensure this import exists
 
 class ProfilePage extends StatefulWidget {
   final String phoneNumber;
@@ -111,17 +111,13 @@ class _ProfilePageState extends State<ProfilePage> {
             _controllersInitialized = true;
           }
 
-          // --- MODIFIED SECTION: SCROLLABLE LAYOUT ---
           return LayoutBuilder(
             builder: (context, constraints) {
               return SingleChildScrollView(
-                // Allows scrolling when content overflows (e.g., keyboard open)
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: ConstrainedBox(
-                  // Forces the content to be at least as tall as the screen
                   constraints: BoxConstraints(minHeight: constraints.maxHeight),
                   child: IntrinsicHeight(
-                    // Allows the Spacer() to work inside a ScrollView
                     child: Padding(
                       padding: const EdgeInsets.all(20),
                       child: Column(
@@ -169,7 +165,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
                           const SizedBox(height: 24),
 
-                          // ----- EDITABLE NAME & CITY -----
                           Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
@@ -195,7 +190,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                           const SizedBox(height: 16),
 
-                          // === SAVE BUTTON ===
+                          // SAVE BUTTON
                           GestureDetector(
                             onTap: _saving ? null : _saveProfile,
                             child: Container(
@@ -237,13 +232,16 @@ class _ProfilePageState extends State<ProfilePage> {
 
                           const SizedBox(height: 12),
 
-                          // === HELP BUTTON ===
+                          // --- NEW: HELP BUTTON ---
                           GestureDetector(
                             onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const SupportPage(),
+                                  // FIX: We must pass the phoneNumber now!
+                                  builder: (_) => SupportPage(
+                                    phoneNumber: widget.phoneNumber,
+                                  ),
                                 ),
                               );
                             },
@@ -267,17 +265,14 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             ),
                           ),
-
-                          // This Spacer will push the Logout button to the bottom
-                          // IF there is screen space available.
+                          // ------------------------
                           const Spacer(),
                           const SizedBox(height: 20),
 
-                          // ----- LOGOUT -----
+                          // LOGOUT BUTTON
                           GestureDetector(
                             onTap: () async {
                               await FirebaseAuth.instance.signOut();
-
                               if (mounted) {
                                 Navigator.pushAndRemoveUntil(
                                   context,
