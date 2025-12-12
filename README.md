@@ -59,6 +59,7 @@ This project was built as a capstone for an MBA in Fintech to demonstrate **Prod
 | Dashboard | Wallet | Analytics | Loans |
 
 | | | | |  
+<img width="498" height="931" alt="Dashboard" src="https://github.com/user-attachments/assets/f03c8636-9118-4467-9248-6baed2c2fa2d" />
 
 *(Note: Add screenshots of your app in the folder and link them here)*
 
