@@ -132,7 +132,7 @@ class _SupportPageState extends State<SupportPage> {
                     icon: Icons.email,
                     color: Colors.blue,
                     title: "Email",
-                    subtitle: "jayakumarkumar7783@gmail.com",
+                    subtitle: "support@gigbank.in",
                     onTap: _sendEmail,
                   ),
                 ),
