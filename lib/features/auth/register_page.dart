@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:gigworker/features/auth/login_page.dart';
-import 'package:gigworker/features/dashboard/dashboard_page.dart';
 import '../../services/auth_service.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -14,7 +13,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _cityController = TextEditingController(); // <--- NEW CONTROLLER
+  final _cityController = TextEditingController();
   final _passController = TextEditingController();
 
   final AuthService _authService = AuthService();
@@ -24,7 +23,7 @@ class _RegisterPageState extends State<RegisterPage> {
     if (_nameController.text.isEmpty ||
         _emailController.text.isEmpty ||
         _phoneController.text.isEmpty ||
-        _cityController.text.isEmpty || // <--- CHECK CITY
+        _cityController.text.isEmpty ||
         _passController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -38,7 +37,7 @@ class _RegisterPageState extends State<RegisterPage> {
       name: _nameController.text.trim(),
       email: _emailController.text.trim(),
       phone: _phoneController.text.trim(),
-      city: _cityController.text.trim(), // <--- PASS CITY
+      city: _cityController.text.trim(),
       password: _passController.text.trim(),
     );
 
@@ -49,38 +48,23 @@ class _RegisterPageState extends State<RegisterPage> {
         SnackBar(content: Text(error), backgroundColor: Colors.red),
       );
     } else {
+      // ✅ SUCCESS: Show Verification Message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Account Created! Please Login."),
+          content: Text(
+            "Account Created! Verification link sent to your email.",
+          ),
           backgroundColor: Colors.green,
+          duration: Duration(seconds: 4),
         ),
       );
+
+      // Navigate to Login Page so they can login AFTER verifying
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const LoginPage()),
       );
     }
-  }
-
-  // Google Sign In (Same as before)
-  void _handleGoogleSignIn() async {
-    setState(() => _isLoading = true);
-    String? error = await _authService.signInWithGoogle();
-    if (error == null) {
-      // In real app, fetch actual user ID
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const DashboardPage(phoneNumber: "GoogleUser"),
-        ),
-      );
-    } else {
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error), backgroundColor: Colors.red),
-        );
-    }
-    setState(() => _isLoading = false);
   }
 
   @override
@@ -129,11 +113,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 isPhone: true,
               ),
               const SizedBox(height: 16),
-              _buildInput(
-                "City",
-                _cityController,
-                false,
-              ), // <--- NEW INPUT FIELD
+              _buildInput("City", _cityController, false),
               const SizedBox(height: 16),
               _buildInput("Password", _passController, true),
 
@@ -170,40 +150,8 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
               ),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: 50),
 
-              Center(
-                child: Column(
-                  children: [
-                    const Text(
-                      "or continue with",
-                      style: TextStyle(color: Colors.white38),
-                    ),
-                    const SizedBox(height: 20),
-                    GestureDetector(
-                      onTap: _handleGoogleSignIn,
-                      child: Container(
-                        width: 50,
-                        height: 50,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(color: Colors.black26, blurRadius: 5),
-                          ],
-                        ),
-                        padding: const EdgeInsets.all(12),
-                        child: Image.network(
-                          "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1200px-Google_%22G%22_logo.svg.png",
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 30),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

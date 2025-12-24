@@ -1,27 +1,4 @@
 {
-  "flutter": {
-    "platforms": {
-      "android": {
-        "default": {
-          "projectId": "gigworker-11830",
-          "appId": "1:1049501479506:android:65528047177d6229d4a58b",
-          "fileOutput": "android/app/google-services.json"
-        }
-      },
-      "dart": {
-        "lib/firebase_options.dart": {
-          "projectId": "gigworker-11830",
-          "configurations": {
-            "android": "1:1049501479506:android:65528047177d6229d4a58b",
-            "ios": "1:1049501479506:ios:c5fe483ad907ab1dd4a58b",
-            "macos": "1:1049501479506:ios:c5fe483ad907ab1dd4a58b",
-            "web": "1:1049501479506:web:34069a643ef0b2cfd4a58b",
-            "windows": "1:1049501479506:web:aba48adb6bf0af81d4a58b"
-          }
-        }
-      }
-    }
-  },
   "hosting": {
     "public": "build/web",
     "ignore": [

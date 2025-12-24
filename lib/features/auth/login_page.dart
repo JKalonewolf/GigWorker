@@ -1,9 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart'; // <--- Added for verification check
 import 'package:flutter/material.dart';
 import 'package:gigworker/features/dashboard/dashboard_page.dart';
 import 'package:gigworker/features/auth/register_page.dart';
 import 'package:gigworker/features/auth/forgot_password_page.dart';
 import '../../services/auth_service.dart';
-import '../../services/biometric_service.dart'; // Import the new service
+import '../../services/biometric_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -16,7 +17,7 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passController = TextEditingController();
   final AuthService _authService = AuthService();
-  final BiometricService _bioService = BiometricService(); // <--- Biometric Instance
+  final BiometricService _bioService = BiometricService();
 
   bool _isLoading = false;
   bool _canUseBiometrics = false;
@@ -46,10 +47,45 @@ class _LoginPageState extends State<LoginPage> {
 
     if (error != null) {
       setState(() => _isLoading = false);
-      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error), backgroundColor: Colors.red));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error), backgroundColor: Colors.red),
+        );
+      }
     } else {
+      // 🔒 CHECK EMAIL VERIFICATION STATUS HERE 🔒
+      User? user = FirebaseAuth.instance.currentUser;
+
+      if (user != null && !user.emailVerified) {
+        // If email is NOT verified:
+        await FirebaseAuth.instance.signOut(); // Log them out immediately
+        setState(() => _isLoading = false);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                "Email not verified! Please check your inbox.",
+              ),
+              backgroundColor: Colors.orange,
+              action: SnackBarAction(
+                label: "Resend",
+                textColor: Colors.white,
+                onPressed: () async {
+                  await user.sendEmailVerification();
+                },
+              ),
+            ),
+          );
+        }
+        return; // Stop execution here
+      }
+
       // SUCCESS: Save credentials for future fingerprint login
-      await _bioService.saveCredentials(_emailController.text.trim(), _passController.text.trim());
+      await _bioService.saveCredentials(
+        _emailController.text.trim(),
+        _passController.text.trim(),
+      );
 
       _navigateToDashboard(_emailController.text.trim());
     }
@@ -61,7 +97,15 @@ class _LoginPageState extends State<LoginPage> {
     Map<String, String>? credentials = await _bioService.getCredentials();
 
     if (credentials == null) {
-      if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please login with password once to enable fingerprint.")));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Please login with password once to enable fingerprint.",
+            ),
+          ),
+        );
+      }
       return;
     }
 
@@ -78,10 +122,33 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       if (error == null) {
+        // 🔒 CHECK EMAIL VERIFICATION FOR FINGERPRINT TOO 🔒
+        User? user = FirebaseAuth.instance.currentUser;
+        if (user != null && !user.emailVerified) {
+          await FirebaseAuth.instance.signOut();
+          setState(() => _isLoading = false);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Email not verified! Please check your inbox."),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+          return;
+        }
+
         _navigateToDashboard(credentials['email']!);
       } else {
         setState(() => _isLoading = false);
-        if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Session expired. Please login again."), backgroundColor: Colors.red));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Session expired. Please login again."),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
@@ -90,7 +157,10 @@ class _LoginPageState extends State<LoginPage> {
     String? phone = await _authService.getPhoneFromEmail(email);
     setState(() => _isLoading = false);
     if (phone != null && mounted) {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => DashboardPage(phoneNumber: phone)));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => DashboardPage(phoneNumber: phone)),
+      );
     }
   }
 
@@ -113,7 +183,15 @@ class _LoginPageState extends State<LoginPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 60),
-              const Text("Welcome\nBack", style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.white, height: 1.2)),
+              const Text(
+                "Welcome\nBack",
+                style: TextStyle(
+                  fontSize: 40,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  height: 1.2,
+                ),
+              ),
               const SizedBox(height: 60),
 
               _buildInput("Email", _emailController, false),
@@ -130,12 +208,28 @@ class _LoginPageState extends State<LoginPage> {
                   onPressed: _isLoading ? null : _login,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF6A5ACD),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
                     elevation: 5,
                   ),
                   child: _isLoading
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Text("Log in", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          "Log in",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
               ),
 
@@ -149,11 +243,17 @@ class _LoginPageState extends State<LoginPage> {
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.1),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.blueAccent.withOpacity(0.5))
+                        color: Colors.white.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.blueAccent.withOpacity(0.5),
+                        ),
                       ),
-                      child: const Icon(Icons.fingerprint, size: 40, color: Colors.blueAccent),
+                      child: const Icon(
+                        Icons.fingerprint,
+                        size: 40,
+                        color: Colors.blueAccent,
+                      ),
                     ),
                   ),
                 ),
@@ -162,8 +262,16 @@ class _LoginPageState extends State<LoginPage> {
 
               Center(
                 child: GestureDetector(
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ForgotPasswordPage())),
-                  child: const Text("Forgot Password?", style: TextStyle(color: Colors.white70, fontSize: 14)),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ForgotPasswordPage(),
+                    ),
+                  ),
+                  child: const Text(
+                    "Forgot Password?",
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
                 ),
               ),
 
@@ -172,10 +280,22 @@ class _LoginPageState extends State<LoginPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text("Don't have an account? ", style: TextStyle(color: Colors.white38)),
+                  const Text(
+                    "Don't have an account? ",
+                    style: TextStyle(color: Colors.white38),
+                  ),
                   GestureDetector(
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterPage())),
-                    child: const Text("Sign in", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const RegisterPage()),
+                    ),
+                    child: const Text(
+                      "Sign in",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -200,7 +320,10 @@ class _LoginPageState extends State<LoginPage> {
           hintText: hint,
           hintStyle: const TextStyle(color: Colors.white38),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 18,
+          ),
         ),
       ),
     );
