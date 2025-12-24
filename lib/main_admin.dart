@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:gigworker/features/admin/web_admin_dashboard.dart';
+import 'package:gigworker/features/admin/admin_login_page.dart'; // ✅ IMPORT LOGIN PAGE
+// import 'package:gigworker/features/admin/web_admin_dashboard.dart'; // (Optional: Can remove if not used here directly)
 import 'firebase_options.dart';
 
 void main() async {
@@ -21,7 +22,8 @@ class AdminApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFF111111),
         primaryColor: Colors.blueAccent,
       ),
-      home: const WebAdminDashboard(),
+      // 🛑 CHANGED: Start with Login Page, not Dashboard
+      home: const AdminLoginPage(),
     );
   }
 }
