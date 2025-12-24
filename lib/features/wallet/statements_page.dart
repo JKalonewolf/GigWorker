@@ -1,8 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:gigworker/features/wallet/services/pdf_service.dart';
 
 class StatementsPage extends StatefulWidget {
-  final String phoneNumber; // User ID
+  final String phoneNumber;
 
   const StatementsPage({super.key, required this.phoneNumber});
 
@@ -13,18 +14,24 @@ class StatementsPage extends StatefulWidget {
 class _StatementsPageState extends State<StatementsPage> {
   bool _isLoading = false;
 
-  Future<void> _downloadStatement(bool isWeekly) async {
+  // 1. Update this function to accept Name and Phone
+  Future<void> _downloadStatement(
+    bool isWeekly,
+    String name,
+    String phone,
+  ) async {
     setState(() => _isLoading = true);
     try {
-      // Call our service
       await PdfService().generateStatement(
-          userId: widget.phoneNumber,
-          isWeekly: isWeekly
+        userId: widget.phoneNumber,
+        userName: name, // <--- PASS NAME
+        userPhone: phone, // <--- PASS PHONE
+        isWeekly: isWeekly,
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error: $e")));
     } finally {
       setState(() => _isLoading = false);
     }
@@ -35,7 +42,10 @@ class _StatementsPageState extends State<StatementsPage> {
     return Scaffold(
       backgroundColor: const Color(0xFF101010),
       appBar: AppBar(
-        title: const Text("Account Statements", style: TextStyle(color: Colors.white)),
+        title: const Text(
+          "Account Statements",
+          style: TextStyle(color: Colors.white),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
@@ -43,46 +53,117 @@ class _StatementsPageState extends State<StatementsPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            const Icon(Icons.description, size: 80, color: Colors.white24),
-            const SizedBox(height: 20),
-            const Text(
-              "Download your transaction history",
-              style: TextStyle(color: Colors.white70, fontSize: 16),
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .doc(widget.phoneNumber)
+            .snapshots(),
+        builder: (context, snapshot) {
+          String userName = "Gig Worker";
+          // Fetch the name from Firebase
+          if (snapshot.hasData && snapshot.data!.exists) {
+            final data = snapshot.data!.data() as Map<String, dynamic>;
+            userName = data['name'] ?? "Gig Worker";
+          }
+
+          return Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              children: [
+                // Account Holder Card
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E1E1E),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "ACCOUNT HOLDER",
+                        style: TextStyle(
+                          color: Colors.white38,
+                          fontSize: 10,
+                          letterSpacing: 1.5,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        userName,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "+91 ${widget.phoneNumber}",
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 30),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    "Download History",
+                    style: TextStyle(color: Colors.white54, fontSize: 14),
+                  ),
+                ),
+                const SizedBox(height: 15),
+
+                // Weekly Button - PASS USERNAME HERE
+                _buildStatementCard(
+                  title: "Weekly Statement",
+                  subtitle: "Last 7 Days",
+                  icon: Icons.calendar_view_week,
+                  color: Colors.blueAccent,
+                  onTap: () => _downloadStatement(
+                    true,
+                    userName,
+                    widget.phoneNumber,
+                  ), // <--- PASS DATA
+                ),
+
+                const SizedBox(height: 15),
+
+                // Monthly Button - PASS USERNAME HERE
+                _buildStatementCard(
+                  title: "Monthly Statement",
+                  subtitle: "Last 30 Days",
+                  icon: Icons.calendar_month,
+                  color: Colors.purpleAccent,
+                  onTap: () => _downloadStatement(
+                    false,
+                    userName,
+                    widget.phoneNumber,
+                  ), // <--- PASS DATA
+                ),
+
+                if (_isLoading) ...[
+                  const Spacer(),
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 10),
+                  const Text(
+                    "Generating PDF...",
+                    style: TextStyle(color: Colors.white54),
+                  ),
+                  const Spacer(),
+                ],
+              ],
             ),
-            const SizedBox(height: 40),
-
-            // Weekly Button
-            _buildStatementCard(
-              title: "Weekly Statement",
-              subtitle: "Last 7 Days",
-              icon: Icons.calendar_view_week,
-              color: Colors.blueAccent,
-              onTap: () => _downloadStatement(true),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Monthly Button
-            _buildStatementCard(
-              title: "Monthly Statement",
-              subtitle: "Last 30 Days",
-              icon: Icons.calendar_month,
-              color: Colors.purpleAccent,
-              onTap: () => _downloadStatement(false),
-            ),
-
-            if (_isLoading) ...[
-              const SizedBox(height: 40),
-              const CircularProgressIndicator(),
-              const SizedBox(height: 10),
-              const Text("Generating PDF...", style: TextStyle(color: Colors.white54)),
-            ],
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -118,9 +199,19 @@ class _StatementsPageState extends State<StatementsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: Colors.white54, fontSize: 13)),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: Colors.white54, fontSize: 13),
+                  ),
                 ],
               ),
             ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Needed to save Profile
+import 'package:gigworker/features/auth/login_page.dart';
 import 'package:gigworker/features/dashboard/dashboard_page.dart';
+import '../../services/auth_service.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -11,32 +11,21 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
-  // 1. Add Controllers to capture input
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _mobileController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _cityController = TextEditingController(); // <--- NEW CONTROLLER
+  final _passController = TextEditingController();
 
+  final AuthService _authService = AuthService();
   bool _isLoading = false;
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _mobileController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  // 2. The Real Registration Logic
-  Future<void> _handleRegister() async {
-    final name = _nameController.text.trim();
-    final mobile = _mobileController.text.trim();
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-
-    // Basic Validation
-    if (name.isEmpty || mobile.isEmpty || email.isEmpty || password.isEmpty) {
+  void _register() async {
+    if (_nameController.text.isEmpty ||
+        _emailController.text.isEmpty ||
+        _phoneController.text.isEmpty ||
+        _cityController.text.isEmpty || // <--- CHECK CITY
+        _passController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text("Please fill all fields")));
@@ -45,166 +34,198 @@ class _RegisterPageState extends State<RegisterPage> {
 
     setState(() => _isLoading = true);
 
-    try {
-      // A. Create User in Firebase Auth
-      UserCredential userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(email: email, password: password);
+    String? error = await _authService.signUp(
+      name: _nameController.text.trim(),
+      email: _emailController.text.trim(),
+      phone: _phoneController.text.trim(),
+      city: _cityController.text.trim(), // <--- PASS CITY
+      password: _passController.text.trim(),
+    );
 
-      User? user = userCredential.user;
+    setState(() => _isLoading = false);
 
-      if (user != null) {
-        // B. Update Display Name
-        await user.updateDisplayName(name);
-
-        // C. Create Database Entry (Crucial to prevent Dashboard Crash)
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-          'uid': user.uid,
-          'name': name,
-          'phoneNumber': mobile,
-          'email': email,
-          'walletBalance': 0.00, // Start with 0
-          'kycStatus': 'pending', // Default status
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-
-        if (mounted) {
-          // D. Success! Go to Dashboard
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              // Pass the UID so Dashboard knows which document to load
-              builder: (_) => DashboardPage(phoneNumber: user.uid),
-            ),
-          );
-        }
-      }
-    } on FirebaseAuthException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message ?? "Registration Failed")),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error), backgroundColor: Colors.red),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Account Created! Please Login."),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
     }
+  }
+
+  // Google Sign In (Same as before)
+  void _handleGoogleSignIn() async {
+    setState(() => _isLoading = true);
+    String? error = await _authService.signInWithGoogle();
+    if (error == null) {
+      // In real app, fetch actual user ID
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const DashboardPage(phoneNumber: "GoogleUser"),
+        ),
+      );
+    } else {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error), backgroundColor: Colors.red),
+        );
+    }
+    setState(() => _isLoading = false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF101010),
-      body: SafeArea(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF4A2C68), Color(0xFF1B1B2A)],
+          ),
+        ),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 60),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 20),
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: const Icon(Icons.arrow_back, color: Colors.white),
+              ),
+              const SizedBox(height: 30),
 
-              // Back button
-              Align(
-                alignment: Alignment.centerLeft,
-                child: IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.arrow_back, color: Colors.white70),
+              const Text(
+                "Create\nAccount",
+                style: TextStyle(
+                  fontSize: 40,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  height: 1.2,
                 ),
               ),
+              const SizedBox(height: 30),
 
-              const SizedBox(height: 10),
+              _buildInput("Full name", _nameController, false),
+              const SizedBox(height: 16),
+              _buildInput("Email", _emailController, false),
+              const SizedBox(height: 16),
+              _buildInput(
+                "Phone number",
+                _phoneController,
+                false,
+                isPhone: true,
+              ),
+              const SizedBox(height: 16),
+              _buildInput(
+                "City",
+                _cityController,
+                false,
+              ), // <--- NEW INPUT FIELD
+              const SizedBox(height: 16),
+              _buildInput("Password", _passController, true),
 
-              // App title centered
-              Column(
-                children: const [
-                  Text(
-                    "GigBank",
-                    style: TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+              const SizedBox(height: 40),
+
+              SizedBox(
+                width: double.infinity,
+                height: 55,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _register,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6A5ACD),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
                     ),
                   ),
-                  SizedBox(height: 6),
-                  Text(
-                    "Create your gig worker account",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: Colors.white60),
-                  ),
-                ],
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          "Sign up",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                ),
               ),
 
               const SizedBox(height: 30),
 
-              // Name Input
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Full name",
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
+              Center(
+                child: Column(
+                  children: [
+                    const Text(
+                      "or continue with",
+                      style: TextStyle(color: Colors.white38),
+                    ),
+                    const SizedBox(height: 20),
+                    GestureDetector(
+                      onTap: _handleGoogleSignIn,
+                      child: Container(
+                        width: 50,
+                        height: 50,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(color: Colors.black26, blurRadius: 5),
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(12),
+                        child: Image.network(
+                          "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1200px-Google_%22G%22_logo.svg.png",
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              _buildInput("Enter your full name", controller: _nameController),
 
-              const SizedBox(height: 18),
-
-              // Mobile Input
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Mobile number",
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
-                ),
+              const SizedBox(height: 30),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    "Already have an account? ",
+                    style: TextStyle(color: Colors.white38),
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoginPage()),
+                    ),
+                    child: const Text(
+                      "Log in",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              _buildInput(
-                "Enter your mobile number",
-                keyboardType: TextInputType.phone,
-                controller: _mobileController,
-              ),
-
-              const SizedBox(height: 18),
-
-              // Email Input
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Email",
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-              ),
-              const SizedBox(height: 8),
-              _buildInput(
-                "Enter your email",
-                keyboardType: TextInputType.emailAddress,
-                controller: _emailController,
-              ),
-
-              const SizedBox(height: 18),
-
-              // Password Input
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Password",
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-              ),
-              const SizedBox(height: 8),
-              _buildInput(
-                "Create a password",
-                obscure: true,
-                controller: _passwordController,
-              ),
-
-              const SizedBox(height: 24),
-
-              // Create account button
-              _buildPrimaryButton(
-                _isLoading ? "Creating..." : "Create account",
-                onTap: _isLoading ? () {} : _handleRegister,
-              ),
-
-              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -212,70 +233,30 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  // ------- Reusable widgets -------
-
-  // Updated to accept Controller
   Widget _buildInput(
-    String hint, {
-    TextInputType keyboardType = TextInputType.text,
-    bool obscure = false,
-    required TextEditingController controller, // Added this
+    String hint,
+    TextEditingController ctrl,
+    bool isPass, {
+    bool isPhone = false,
   }) {
-    return TextField(
-      controller: controller, // Connected controller
-      keyboardType: keyboardType,
-      obscureText: obscure,
-      style: const TextStyle(color: Colors.white),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white38),
-        filled: true,
-        fillColor: const Color(0xFF191919),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 14,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF303030)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.blueAccent),
-        ),
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF161621).withOpacity(0.5),
+        borderRadius: BorderRadius.circular(30),
       ),
-    );
-  }
-
-  Widget _buildPrimaryButton(String text, {required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Colors.blueAccent, Colors.purpleAccent],
+      child: TextField(
+        controller: ctrl,
+        obscureText: isPass,
+        keyboardType: isPhone ? TextInputType.phone : TextInputType.text,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(color: Colors.white38),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 18,
           ),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Center(
-          child: text == "Creating..."
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2,
-                  ),
-                )
-              : Text(
-                  text,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
         ),
       ),
     );

@@ -1,9 +1,7 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:gigworker/features/kyc/kyc_form_page.dart';
+import 'package:gigworker/features/kyc/kyc_form_page.dart'; // We will create this next
 import 'package:gigworker/models/kyc_model.dart';
 import 'package:gigworker/services/kyc_service.dart';
-import 'package:gigworker/services/local_notification_service.dart'; // IMPORT ADDED
 
 class KycPage extends StatelessWidget {
   final String phoneNumber;
@@ -16,8 +14,10 @@ class KycPage extends StatelessWidget {
         return Colors.greenAccent;
       case 'rejected':
         return Colors.redAccent;
-      default:
+      case 'pending':
         return Colors.amberAccent;
+      default:
+        return Colors.grey; // Unverified color
     }
   }
 
@@ -27,77 +27,90 @@ class KycPage extends StatelessWidget {
         return "KYC Approved ✅";
       case 'rejected':
         return "KYC Rejected ❌";
+      case 'pending':
+        return "Verification Pending ⏳";
       default:
-        return "KYC Pending";
+        return "Not Started ⚠️";
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final kycService = KycService();
-    // unused variable removed
 
     return Scaffold(
       backgroundColor: const Color(0xFF101010),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF101010),
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text("KYC"),
+        title: const Text("KYC Status"),
       ),
       body: StreamBuilder<KycModel?>(
         stream: kycService.streamKyc(phoneNumber),
         builder: (context, kycSnap) {
           final kyc = kycSnap.data;
-          final status = kyc?.status ?? 'pending';
+
+          // ✅ FIX 1: Default to 'unverified' if null
+          final status = kyc?.status ?? 'unverified';
+
           final color = _statusColor(status);
           final text = _statusText(status);
-
-          // === NOTIFICATION TRIGGER CHECK ===
-          // If we detect the status is approved, we can trigger the alert locally
-          // Note: In a real app, this is better handled by a background service,
-          // but for this demo, we can check it here.
-          if (status == 'approved') {
-            // We can check a local flag or just trigger it (safely ignoring if already done)
-            // For this portfolio demo, triggering it here ensures they see it when they open the page.
-            // (Optional: You can remove this block if you only want it on the Submit button in FormPage)
-          }
 
           return Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // status card
+                // STATUS CARD
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: const Color(0xFF181818),
                     borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: color.withOpacity(0.3)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        "KYC Status",
+                      Text(
+                        "Current Status",
                         style: TextStyle(color: Colors.white70, fontSize: 14),
                       ),
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Icon(Icons.verified_user, color: color, size: 18),
+                          Icon(
+                            status == 'approved'
+                                ? Icons.check_circle
+                                : (status == 'rejected'
+                                      ? Icons.cancel
+                                      : (status == 'pending'
+                                            ? Icons.access_time
+                                            : Icons.info_outline)),
+                            color: color,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             text,
                             style: TextStyle(
                               color: color,
-                              fontSize: 15,
+                              fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
-                      if (kyc?.rejectionReason.isNotEmpty == true) ...[
+                      if (status == 'pending') ...[
+                        const SizedBox(height: 6),
+                        const Text(
+                          "Your documents are with the admin for review.",
+                          style: TextStyle(color: Colors.white38, fontSize: 12),
+                        ),
+                      ],
+                      if (kyc?.rejectionReason.isNotEmpty == true &&
+                          status == 'rejected') ...[
                         const SizedBox(height: 8),
                         Text(
                           "Reason: ${kyc!.rejectionReason}",
@@ -123,83 +136,74 @@ class KycPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
 
+                // ✅ FIX 2: Only mark steps as "done" if status is NOT unverified
                 _stepTile(
                   index: 1,
                   title: "Personal details",
                   subtitle: "Name, DOB, gender, address",
-                  done: kyc != null,
+                  done: status != 'unverified',
                 ),
                 _stepTile(
                   index: 2,
                   title: "Document upload",
                   subtitle: "Aadhaar & PAN",
-                  done:
-                      kyc != null &&
-                      kyc.aadhaarNumber.isNotEmpty &&
-                      kyc.panNumber.isNotEmpty,
+                  done: status != 'unverified',
                 ),
                 _stepTile(
                   index: 3,
                   title: "Selfie capture",
                   subtitle: "Liveliness check",
-                  done: kyc != null && kyc.selfiePath.isNotEmpty,
+                  done: status != 'unverified',
                 ),
                 _stepTile(
                   index: 4,
                   title: "Review & submit",
-                  subtitle: "Confirm and submit for verification",
-                  done: kyc != null,
+                  subtitle: "Sent to admin for approval",
+                  // Done only if Pending, Approved, or Rejected
+                  done:
+                      status == 'pending' ||
+                      status == 'approved' ||
+                      status == 'rejected',
                   isLast: true,
                 ),
 
                 const Spacer(),
 
-                GestureDetector(
-                  onTap: () async {
-                    // Navigate to Form
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => KycFormPage(
-                          phoneNumber: phoneNumber,
-                          existingKyc: kyc,
+                // ACTION BUTTON
+                // Show button if Unverified OR Rejected
+                if (status == 'unverified' || status == 'rejected')
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => KycFormPage(
+                            phoneNumber: phoneNumber,
+                          ), // Navigate to Form
                         ),
+                      );
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Colors.blueAccent, Colors.purpleAccent],
+                        ),
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                    );
-
-                    // === NOTIFICATION TRIGGER ON RETURN ===
-                    // When they come back from the Form Page, if they submitted successfully,
-                    // we show the notification here.
-                    // Ideally, we check if the result was 'submitted'.
-                    // For now, we simulate it if the status is 'pending' or 'approved'.
-                    LocalNotificationService().showNotification(
-                      id: DateTime.now().millisecond,
-                      title: 'KYC Verified 🛡️',
-                      body:
-                          'Your documents have been approved. You are now a verified GigBank user!',
-                    );
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Colors.blueAccent, Colors.purpleAccent],
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Center(
-                      child: Text(
-                        kyc == null ? "Start KYC" : "Edit / Resubmit KYC",
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                      child: Center(
+                        child: Text(
+                          status == 'rejected' ? "Resubmit KYC" : "Start KYC",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
               ],
             ),
           );
@@ -230,14 +234,16 @@ class KycPage extends StatelessWidget {
             backgroundColor: done
                 ? Colors.greenAccent.withOpacity(0.2)
                 : const Color(0xFF222222),
-            child: Text(
-              "$index",
-              style: TextStyle(
-                color: done ? Colors.greenAccent : Colors.white70,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            child: done
+                ? const Icon(Icons.check, size: 16, color: Colors.greenAccent)
+                : Text(
+                    "$index",
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -260,8 +266,6 @@ class KycPage extends StatelessWidget {
               ],
             ),
           ),
-          if (done)
-            const Icon(Icons.check_circle, color: Colors.greenAccent, size: 18),
         ],
       ),
     );

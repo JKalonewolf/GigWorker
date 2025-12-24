@@ -7,6 +7,8 @@ import 'package:intl/intl.dart';
 class PdfService {
   Future<void> generateStatement({
     required String userId,
+    required String userName, // <--- Added Name
+    required String userPhone, // <--- Added Phone
     required bool isWeekly,
   }) async {
     final pdf = pw.Document();
@@ -89,7 +91,7 @@ class PdfService {
       }
     }
 
-    // 7. BUILD PDF (Using MultiPage to fix overflow issues)
+    // 7. BUILD PDF
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
@@ -119,6 +121,20 @@ class PdfService {
                           color: PdfColors.grey700,
                         ),
                       ),
+                      pw.SizedBox(height: 10), // Spacing
+                      // --- NEW: ACCOUNT HOLDER DETAILS ---
+                      pw.Text(
+                        "Account Holder: $userName",
+                        style: pw.TextStyle(
+                          fontSize: 12,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                      pw.Text(
+                        "Mobile: +91 $userPhone",
+                        style: const pw.TextStyle(fontSize: 12),
+                      ),
+                      // -----------------------------------
                     ],
                   ),
                   pw.Column(
@@ -145,7 +161,7 @@ class PdfService {
             ],
           );
         },
-        // Footer appears on every page
+        // Footer
         footer: (pw.Context context) {
           return pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,

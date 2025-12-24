@@ -1,66 +1,78 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserModel {
+  final String uid;
   final String phone;
   final String name;
+  final String email;
   final String city;
   final String kycStatus;
   final double walletBalance;
   final DateTime joined;
+  final String profilePic;
 
   UserModel({
+    required this.uid,
     required this.phone,
     required this.name,
+    required this.email,
     required this.city,
     required this.kycStatus,
     required this.walletBalance,
     required this.joined,
+    required this.profilePic,
   });
 
   factory UserModel.fromMap(Map<String, dynamic> data) {
-    // ---- joined field: can be Timestamp or String or null ----
-    final joinedRaw = data['joined'];
-    DateTime joined;
+    // ---- DATE PARSING (Safe for Timestamp or String) ----
+    // We check 'createdAt' (from AuthService) OR 'joined'
+    final joinedRaw = data['createdAt'] ?? data['joined'];
+    DateTime joinedDate;
 
     if (joinedRaw is Timestamp) {
-      // If you ever store as Firestore Timestamp
-      joined = joinedRaw.toDate();
+      joinedDate = joinedRaw.toDate();
     } else if (joinedRaw is String) {
-      joined = DateTime.tryParse(joinedRaw) ?? DateTime.now();
+      joinedDate = DateTime.tryParse(joinedRaw) ?? DateTime.now();
     } else {
-      joined = DateTime.now();
+      joinedDate = DateTime.now();
     }
 
-    // ---- walletBalance: handle int/double/null safely ----
+    // ---- WALLET PARSING (Safe for int or double) ----
     final walletRaw = data['walletBalance'];
-    double walletBalance;
+    double walletVal;
     if (walletRaw is int) {
-      walletBalance = walletRaw.toDouble();
+      walletVal = walletRaw.toDouble();
     } else if (walletRaw is double) {
-      walletBalance = walletRaw;
+      walletVal = walletRaw;
     } else {
-      walletBalance = 0.0;
+      walletVal = 0.0;
     }
 
     return UserModel(
-      phone: data['phone'] ?? '',
+      uid: data['uid'] ?? '',
+      // Check both 'phoneNumber' (from Auth) and 'phone'
+      phone: data['phoneNumber'] ?? data['phone'] ?? '',
       name: data['name'] ?? 'Gig Worker',
-      city: data['city'] ?? 'Bangalore',
+      email: data['email'] ?? '',
+      city: data['city'] ?? '',
       kycStatus: data['kycStatus'] ?? 'pending',
-      walletBalance: walletBalance,
-      joined: joined,
+      walletBalance: walletVal,
+      joined: joinedDate,
+      profilePic: data['profilePic'] ?? '',
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'phone': phone,
+      'uid': uid,
+      'phoneNumber': phone, // Standardizing on 'phoneNumber' for Firestore
       'name': name,
+      'email': email,
       'city': city,
       'kycStatus': kycStatus,
       'walletBalance': walletBalance,
-      // save as ISO string for now
-      'joined': joined.toIso8601String(),
+      'createdAt': joined, // Standardizing on 'createdAt'
+      'profilePic': profilePic,
     };
   }
 }

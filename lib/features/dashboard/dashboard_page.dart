@@ -21,7 +21,6 @@ class DashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // PREVENT CRASH IF PHONE IS EMPTY
     if (phoneNumber.isEmpty) {
       return const Scaffold(
         backgroundColor: Color(0xFF101010),
@@ -32,21 +31,11 @@ class DashboardPage extends StatelessWidget {
     final userRef = FirebaseFirestore.instance
         .collection('users')
         .doc(phoneNumber);
-
-    final earningsRef = userRef
-        .collection('earnings')
-        .where(
-          'date',
-          isGreaterThanOrEqualTo: Timestamp.fromDate(
-            DateTime.now().subtract(const Duration(days: 7)),
-          ),
-        );
-
+    final allEarningsRef = userRef.collection('earnings');
     final loansRef = userRef
         .collection('loans')
         .orderBy('createdAt', descending: true)
         .limit(5);
-
     final walletTxRef = userRef
         .collection('walletTransactions')
         .orderBy('createdAt', descending: true)
@@ -55,19 +44,19 @@ class DashboardPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFF101010),
       body: SafeArea(
-        // 1. ADDED SingleChildScrollView HERE
         child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ---------- TOP BAR (Greeting + profile) ----------
+                // ---------- TOP BAR (Greeting + Real-Time Profile Pic) ----------
                 StreamBuilder<DocumentSnapshot>(
                   stream: userRef.snapshots(),
                   builder: (context, snap) {
                     String name = "Gig Worker";
                     String kycStatus = "pending";
+                    String profilePic = "";
 
                     if (snap.hasData && snap.data!.exists) {
                       final data =
@@ -75,6 +64,7 @@ class DashboardPage extends StatelessWidget {
                       final rawName = (data['name'] ?? '').toString().trim();
                       name = rawName.isEmpty ? "Gig Worker" : rawName;
                       kycStatus = (data['kycStatus'] ?? 'pending').toString();
+                      profilePic = data['profilePic'] ?? "";
                     }
 
                     return Row(
@@ -99,50 +89,46 @@ class DashboardPage extends StatelessWidget {
                                 fontSize: 14,
                               ),
                             ),
-
                             const SizedBox(height: 12),
 
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 6,
+                            // KYC BADGE
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                color: const Color(0xFF181818),
+                                border: Border.all(
+                                  color: const Color(0xFF333333),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.verified_user,
+                                    size: 14,
+                                    color: kycStatus.toLowerCase() == "verified"
+                                        ? Colors.greenAccent
+                                        : Colors.amberAccent,
                                   ),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(20),
-                                    color: const Color(0xFF181818),
-                                    border: Border.all(
-                                      color: const Color(0xFF333333),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    "KYC: ${kycStatus.toUpperCase()}",
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.verified_user,
-                                        size: 14,
-                                        color:
-                                            kycStatus.toLowerCase() ==
-                                                "approved"
-                                            ? Colors.greenAccent
-                                            : Colors.amberAccent,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        "KYC: ${kycStatus.toUpperCase()}",
-                                        style: const TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ],
                         ),
+
+                        // PROFILE AVATAR (Clickable)
                         GestureDetector(
                           onTap: () {
                             Navigator.push(
@@ -153,14 +139,19 @@ class DashboardPage extends StatelessWidget {
                               ),
                             );
                           },
-                          child: const CircleAvatar(
-                            radius: 20,
-                            backgroundColor: Colors.white12,
-                            child: Icon(
-                              Icons.person,
-                              color: Colors.white,
-                              size: 24,
-                            ),
+                          child: CircleAvatar(
+                            radius: 22,
+                            backgroundColor: const Color(0xFF1E1E1E),
+                            backgroundImage: profilePic.isNotEmpty
+                                ? NetworkImage(profilePic)
+                                : null,
+                            child: profilePic.isEmpty
+                                ? const Icon(
+                                    Icons.person,
+                                    color: Colors.white,
+                                    size: 24,
+                                  )
+                                : null,
                           ),
                         ),
                       ],
@@ -170,7 +161,7 @@ class DashboardPage extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // ---------- WALLET CARD ----------
+                // ---------- WALLET CARD (REAL MONEY) ----------
                 GestureDetector(
                   onTap: () {
                     Navigator.push(
@@ -194,17 +185,20 @@ class DashboardPage extends StatelessWidget {
                         width: double.infinity,
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF181818),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF2C2C2E), Color(0xFF1C1C1E)],
+                          ), // Subtle gradient
                           borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: Colors.white10),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              "Wallet balance",
+                              "Wallet Balance (Withdrawable)",
                               style: TextStyle(color: Colors.white60),
                             ),
-                            const SizedBox(height: 3),
+                            const SizedBox(height: 5),
                             Text(
                               "₹ ${walletBalance.toStringAsFixed(0)}",
                               style: const TextStyle(
@@ -213,13 +207,22 @@ class DashboardPage extends StatelessWidget {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const SizedBox(height: 6),
-                            const Text(
-                              "Tap to view wallet details & transactions",
-                              style: TextStyle(
-                                color: Colors.white38,
-                                fontSize: 12,
-                              ),
+                            const SizedBox(height: 8),
+                            const Row(
+                              children: [
+                                Text(
+                                  "Tap to view details",
+                                  style: TextStyle(
+                                    color: Colors.blueAccent,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                Icon(
+                                  Icons.arrow_forward,
+                                  color: Colors.blueAccent,
+                                  size: 12,
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -230,38 +233,50 @@ class DashboardPage extends StatelessWidget {
 
                 const SizedBox(height: 16),
 
-                // ---------- EARNINGS CARD ----------
+                // ---------- INCOME TRACKER CARD ----------
                 StreamBuilder<QuerySnapshot>(
-                  stream: earningsRef.snapshots(),
+                  stream: allEarningsRef.snapshots(),
                   builder: (context, snap) {
-                    double weekTotal = 0;
+                    double totalEarnings = 0;
                     if (snap.hasData) {
                       for (final doc in snap.data!.docs) {
                         final data = doc.data() as Map<String, dynamic>? ?? {};
-                        weekTotal += _toDouble(data['amount']);
+                        // Only count Verified Earnings
+                        if ((data['status'] ?? 'verified') == 'verified') {
+                          totalEarnings += _toDouble(data['amount']);
+                        }
                       }
                     }
 
                     return Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: const Color(0xFF181818),
                         borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.white10),
                       ),
                       child: Row(
                         children: [
-                          const Icon(
-                            Icons.show_chart,
-                            color: Colors.greenAccent,
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.greenAccent.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.insights,
+                              color: Colors.greenAccent,
+                              size: 24,
+                            ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 14),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
-                                  "This week’s earnings",
+                                  "Verified Tracked Income",
                                   style: TextStyle(
                                     color: Colors.white70,
                                     fontSize: 13,
@@ -269,11 +284,11 @@ class DashboardPage extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  "₹ ${weekTotal.toStringAsFixed(0)}",
+                                  "₹ ${totalEarnings.toStringAsFixed(0)}",
                                   style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
+                                    color: Colors.greenAccent,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ],
@@ -289,12 +304,22 @@ class DashboardPage extends StatelessWidget {
                                 ),
                               );
                             },
-                            child: const Text(
-                              "View",
-                              style: TextStyle(
-                                color: Colors.blueAccent,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2C2C2E),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Text(
+                                "Add +",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
                           ),
@@ -308,85 +333,43 @@ class DashboardPage extends StatelessWidget {
 
                 // ---------- QUICK ACTIONS ----------
                 const Text(
-                  "Quick actions",
-                  style: TextStyle(color: Colors.white70, fontSize: 15),
+                  "Quick Actions",
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 10),
 
                 Row(
                   children: [
                     Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => KycPage(phoneNumber: phoneNumber),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF181818),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Row(
-                            children: const [
-                              Icon(
-                                Icons.verified_user,
-                                color: Colors.greenAccent,
-                              ),
-                              SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  "KYC\nTap to manage",
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ],
+                      child: _quickActionCard(
+                        Icons.verified_user,
+                        Colors.greenAccent,
+                        "KYC",
+                        "Status",
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => KycPage(phoneNumber: phoneNumber),
                           ),
                         ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  EarningsPage(phoneNumber: phoneNumber),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF181818),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Row(
-                            children: const [
-                              Icon(
-                                Icons.attach_money,
-                                color: Colors.orangeAccent,
-                              ),
-                              SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  "Add Earnings\n Tab to See",
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                            ],
+                      child: _quickActionCard(
+                        Icons.bar_chart,
+                        Colors.orangeAccent,
+                        "Stats",
+                        "History",
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                EarningsPage(phoneNumber: phoneNumber),
                           ),
                         ),
                       ),
@@ -404,7 +387,8 @@ class DashboardPage extends StatelessWidget {
                     if (snap.hasData && snap.data!.docs.isNotEmpty) {
                       for (final doc in snap.data!.docs) {
                         final loan = LoanModel.fromDoc(doc);
-                        if (loan.status == 'active') {
+                        if (loan.status == 'active' ||
+                            loan.status == 'pending') {
                           activeLoan = loan;
                           break;
                         }
@@ -412,35 +396,41 @@ class DashboardPage extends StatelessWidget {
                     }
 
                     String title = activeLoan != null
-                        ? "Active loan: ₹${activeLoan.amount.toStringAsFixed(0)}"
-                        : "Need quick cash?";
+                        ? "Active Loan: ₹${activeLoan.amount.toStringAsFixed(0)}"
+                        : "Need Quick Cash?";
                     String subtitle = activeLoan != null
-                        ? "Outstanding ₹${activeLoan.outstandingAmount.toStringAsFixed(0)} • Tap to manage"
-                        : "Apply for a small ticket loan based on your earnings";
+                        ? "Outstanding: ₹${activeLoan.outstandingAmount.toStringAsFixed(0)}"
+                        : "Apply for a loan now";
+                    IconData icon = activeLoan?.status == 'pending'
+                        ? Icons.hourglass_top
+                        : Icons.monetization_on;
+                    Color color = activeLoan?.status == 'pending'
+                        ? Colors.orangeAccent
+                        : Colors.cyanAccent;
+
+                    if (activeLoan?.status == 'pending') {
+                      title = "Loan Application Pending";
+                      subtitle = "Waiting for admin approval";
+                    }
 
                     return GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => LoanPage(phoneNumber: phoneNumber),
-                          ),
-                        );
-                      },
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => LoanPage(phoneNumber: phoneNumber),
+                        ),
+                      ),
                       child: Container(
-                        width: double.infinity,
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: const Color(0xFF181818),
                           borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: color.withOpacity(0.3)),
                         ),
                         child: Row(
                           children: [
-                            const Icon(
-                              Icons.request_page,
-                              color: Colors.cyanAccent,
-                            ),
-                            const SizedBox(width: 12),
+                            Icon(icon, color: color, size: 28),
+                            const SizedBox(width: 16),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -449,11 +439,10 @@ class DashboardPage extends StatelessWidget {
                                     title,
                                     style: const TextStyle(
                                       color: Colors.white,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
                                   Text(
                                     subtitle,
                                     style: const TextStyle(
@@ -467,7 +456,7 @@ class DashboardPage extends StatelessWidget {
                             const Icon(
                               Icons.arrow_forward_ios,
                               color: Colors.white38,
-                              size: 16,
+                              size: 14,
                             ),
                           ],
                         ),
@@ -478,31 +467,32 @@ class DashboardPage extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
+                // ---------- RECENT ACTIVITY ----------
                 const Text(
-                  "Recent activity",
-                  style: TextStyle(color: Colors.white70, fontSize: 15),
+                  "Recent Activity",
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
 
-                // ---------- RECENT ACTIVITY LIST (FIXED SCROLL) ----------
-                // 2. REMOVED Expanded
                 StreamBuilder<QuerySnapshot>(
                   stream: walletTxRef.snapshots(),
                   builder: (context, snap) {
                     if (!snap.hasData || snap.data!.docs.isEmpty) {
                       return const Center(
                         child: Padding(
-                          padding: EdgeInsets.all(20.0),
+                          padding: EdgeInsets.all(20),
                           child: Text(
-                            "No transactions yet",
-                            style: TextStyle(color: Colors.white54),
+                            "No recent transactions",
+                            style: TextStyle(color: Colors.white38),
                           ),
                         ),
                       );
                     }
-
                     return ListView.builder(
-                      // 3. ADDED THESE TWO LINES TO ENABLE PAGE SCROLLING
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: snap.data!.docs.length,
@@ -515,38 +505,60 @@ class DashboardPage extends StatelessWidget {
                         final amount = _toDouble(data['amount']);
                         final note = (data['note'] ?? '').toString();
 
-                        Color amountColor = direction == 'debit'
+                        Color color = direction == 'debit'
                             ? Colors.redAccent
                             : Colors.greenAccent;
                         String prefix = direction == 'debit' ? "-" : "+";
+                        IconData icon = type == 'loan'
+                            ? Icons.request_page
+                            : (type == 'earning'
+                                  ? Icons.work_outline
+                                  : Icons.account_balance_wallet);
 
-                        IconData icon = Icons.account_balance_wallet_outlined;
-                        if (type == 'earning')
-                          icon = Icons.work_outline;
-                        else if (type == 'loan')
-                          icon = Icons.request_page;
-
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: CircleAvatar(
-                            radius: 18,
-                            backgroundColor: const Color(0xFF181818),
-                            child: Icon(icon, color: amountColor, size: 18),
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF181818),
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          title: Text(
-                            note.isEmpty ? type.toUpperCase() : note,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                            ),
-                          ),
-                          trailing: Text(
-                            "$prefix₹${amount.toStringAsFixed(0)}",
-                            style: TextStyle(
-                              color: amountColor,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor: const Color(0xFF252525),
+                                child: Icon(icon, color: color, size: 18),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      note.isEmpty ? type.toUpperCase() : note,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    Text(
+                                      type.toUpperCase(),
+                                      style: const TextStyle(
+                                        color: Colors.white38,
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                "$prefix₹${amount.toStringAsFixed(0)}",
+                                style: TextStyle(
+                                  color: color,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                         );
                       },
@@ -556,6 +568,49 @@ class DashboardPage extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _quickActionCard(
+    IconData icon,
+    Color color,
+    String title,
+    String subtitle,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF181818),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: Colors.white54, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

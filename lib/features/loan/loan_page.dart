@@ -111,7 +111,7 @@ class _LoanPageState extends State<LoanPage> {
     );
   }
 
-  // ---------- WIDGETS ----------
+  // ---------- WIDGETS (EXACT DESIGN KEPT) ----------
 
   Widget _buildEligibilityCard(String kycStatus) {
     final isKycApproved = kycStatus.toLowerCase() == 'approved';
@@ -523,7 +523,6 @@ class _LoanPageState extends State<LoanPage> {
   // ---------- LOGIC: CHECK ELIGIBILITY WITH KYC CHECK ----------
 
   Future<void> _onCheckEligibility() async {
-    // 0) Check KYC Status First
     final userRef = FirebaseFirestore.instance
         .collection('users')
         .doc(widget.phoneNumber);
@@ -556,9 +555,8 @@ class _LoanPageState extends State<LoanPage> {
           ],
         ),
       );
-      return; // Stop here
+      return;
     }
-    // ====================================================
 
     // 1) Fetch last 30 days earnings
     final earningsSnap = await userRef
@@ -911,16 +909,13 @@ class _LoanApplicationPageState extends State<LoanApplicationPage> {
         const SnackBar(content: Text("Loan approved and added to wallet.")),
       );
 
-      // === NOTIFICATION TRIGGER (ADDED) ===
       LocalNotificationService().showNotification(
         id: DateTime.now().millisecond,
         title: 'Loan Approved! ✅',
         body:
             '₹${widget.amount.toStringAsFixed(0)} has been credited to your wallet instantly.',
       );
-      // ====================================
 
-      // Go back to loans main page
       Navigator.of(context).popUntil((route) => route.isFirst);
     } catch (e) {
       if (!mounted) return;
@@ -1066,7 +1061,7 @@ class _LoanApplicationPageState extends State<LoanApplicationPage> {
   }
 }
 
-// ====================== LOAN STATUS PAGE (with Pay EMI) ======================
+// ====================== LOAN STATUS PAGE (FIXED LOGIC) ======================
 
 class LoanStatusPage extends StatelessWidget {
   final String phoneNumber;
@@ -1301,35 +1296,9 @@ class LoanStatusPage extends StatelessWidget {
     );
   }
 
+  // --- 🛑 FIXED PAY EMI FUNCTION 🛑 ---
   Future<void> _payEmi(BuildContext context) async {
     try {
-      final userRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(phoneNumber);
-
-      final userSnap = await userRef.get();
-      final data = userSnap.data() as Map<String, dynamic>? ?? {};
-
-      double _toDouble(dynamic v) {
-        if (v is int) return v.toDouble();
-        if (v is double) return v;
-        return 0.0;
-      }
-
-      final rawBal = data['walletBalance'] ?? 0;
-      final walletBalance = _toDouble(rawBal);
-      final emiAmount = loan.emiAmount;
-
-      if (walletBalance + 1 < emiAmount) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Insufficient wallet balance to pay EMI."),
-          ),
-        );
-        return;
-      }
-
-      // loading dialog
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -1337,35 +1306,88 @@ class LoanStatusPage extends StatelessWidget {
             const Center(child: CircularProgressIndicator(strokeWidth: 2)),
       );
 
-      await LoanService().repayLoan(
-        phone: phoneNumber,
-        loanId: loan.id,
-        amount: emiAmount,
-      );
+      final userRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(phoneNumber);
+      final loanRef = userRef.collection('loans').doc(loan.id);
 
-      Navigator.of(context).pop(); // close dialog
+      // 1. Get Fresh Loan Data to find correct Installment Index
+      DocumentSnapshot loanSnap = await loanRef.get();
+      int paidCount =
+          (loanSnap.data() as Map<String, dynamic>)['installmentsPaid'] ?? 0;
+      int nextIndex = paidCount + 1;
 
+      // 2. Find specific Repayment Doc for this month (Where index == nextIndex)
+      QuerySnapshot repayQuery = await loanRef
+          .collection('repayments')
+          .where('index', isEqualTo: nextIndex)
+          .limit(1)
+          .get();
+      DocumentReference? repayRef;
+      if (repayQuery.docs.isNotEmpty) {
+        repayRef = repayQuery.docs.first.reference;
+      }
+
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        // 3. Check Wallet
+        DocumentSnapshot userSnap = await transaction.get(userRef);
+        double currentWallet =
+            (userSnap.data() as Map<String, dynamic>)['walletBalance']
+                ?.toDouble() ??
+            0.0;
+
+        if (currentWallet < loan.emiAmount) {
+          throw Exception("Insufficient Wallet Balance");
+        }
+
+        // 4. Deduct Money
+        transaction.update(userRef, {
+          'walletBalance': currentWallet - loan.emiAmount,
+        });
+
+        // 5. Update Loan status
+        bool isLast = nextIndex >= loan.tenureMonths;
+        transaction.update(loanRef, {
+          'installmentsPaid': nextIndex,
+          'status': isLast ? 'closed' : 'active',
+        });
+
+        // 6. UPDATE REPAYMENT SCHEDULE DOC TO 'PAID' (This was missing!)
+        if (repayRef != null) {
+          transaction.update(repayRef, {
+            'status': 'paid',
+            'paidAt': FieldValue.serverTimestamp(),
+          });
+        }
+
+        // 7. Log Transaction
+        transaction.set(userRef.collection('walletTransactions').doc(), {
+          'amount': loan.emiAmount,
+          'type': 'loan_repayment',
+          'direction': 'debit',
+          'description': 'EMI Payment ($nextIndex/${loan.tenureMonths})',
+          'status': 'success',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      });
+
+      Navigator.pop(context); // Close loading
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "EMI of ₹${emiAmount.toStringAsFixed(0)} paid successfully.",
-          ),
+        const SnackBar(
+          backgroundColor: Colors.green,
+          content: Text("EMI Paid Successfully!"),
         ),
       );
 
-      // === NOTIFICATION TRIGGER (ADDED) ===
-      LocalNotificationService().showNotification(
-        id: DateTime.now().millisecond,
-        title: 'Repayment Successful 🏦',
-        body:
-            'We received your payment of ₹${emiAmount.toStringAsFixed(0)}. Outstanding balance updated.',
-      );
-      // ====================================
+      // Check if finished
+      if (nextIndex >= loan.tenureMonths) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
     } catch (e) {
-      Navigator.of(context).maybePop();
+      Navigator.pop(context); // Close loading
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text("Error paying EMI: $e")));
+      ).showSnackBar(SnackBar(content: Text("Error: $e")));
     }
   }
 }
@@ -1400,6 +1422,7 @@ class RepaymentSchedulePage extends StatelessWidget {
       body: Column(
         children: [
           const SizedBox(height: 12),
+          // Keep your Summary Card Design
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Container(

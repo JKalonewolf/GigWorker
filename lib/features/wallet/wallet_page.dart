@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:gigworker/features/wallet/add_money_page.dart';
-import 'package:gigworker/features/wallet/statements_page.dart'; // Ensure this file exists
+import 'package:gigworker/features/wallet/statements_page.dart';
+import 'package:gigworker/features/wallet/withdraw_page.dart'; // <--- IMPORTED WITHDRAW PAGE
 
 class WalletPage extends StatefulWidget {
   final String phoneNumber;
@@ -99,28 +100,72 @@ class _WalletPageState extends State<WalletPage> {
                         fontSize: 12,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24), // Added spacing for buttons
+                    // --- ACTION BUTTONS (DEPOSIT & WITHDRAW) ---
                     Row(
                       children: [
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.black,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+                        // 1. DEPOSIT BUTTON
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.black,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => AddMoneyPage(
+                                    phoneNumber: widget.phoneNumber,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              "Add Money",
+                              style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => AddMoneyPage(
-                                  phoneNumber: widget.phoneNumber,
-                                ),
+                        ),
+
+                        const SizedBox(width: 12), // Spacing
+                        // 2. WITHDRAW BUTTON (NEW)
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.black.withOpacity(
+                                0.3,
+                              ), // Darker/Transparent
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                side: const BorderSide(
+                                  color: Colors.white38,
+                                ), // White Border
                               ),
-                            );
-                          },
-                          child: const Text("Deposit From Bank"),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => WithdrawPage(
+                                    phoneNumber: widget.phoneNumber,
+                                    currentBalance:
+                                        balance, // Pass balance for validation
+                                  ),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              "Withdraw",
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -147,7 +192,6 @@ class _WalletPageState extends State<WalletPage> {
           // --- TRANSACTIONS LIST ---
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              // DIRECT FIRESTORE CONNECTION (Fixes "No Data" bug)
               stream: userRef
                   .collection('walletTransactions')
                   .orderBy('createdAt', descending: true)
@@ -159,14 +203,12 @@ class _WalletPageState extends State<WalletPage> {
 
                 var docs = snap.data?.docs ?? [];
 
-                // Manual Filtering logic
                 if (_filter != 'all') {
                   docs = docs.where((d) {
                     final data = d.data() as Map<String, dynamic>;
                     final direction = (data['direction'] ?? '')
                         .toString()
                         .toLowerCase();
-                    // Basic filter: does the direction match the selected chip?
                     return direction.contains(_filter);
                   }).toList();
                 }
@@ -204,18 +246,15 @@ class _WalletPageState extends State<WalletPage> {
                     final note = (data['note'] ?? data['label'] ?? type)
                         .toString();
 
-                    // Handle Date safely
                     Timestamp? ts = data['createdAt'] ?? data['date'];
                     String dateStr = "Just now";
                     if (ts != null) {
                       dateStr = ts.toDate().toString().split('.')[0];
                     }
 
-                    // Determine Color
                     String direction = (data['direction'] ?? '')
                         .toString()
                         .toLowerCase();
-                    // Fallback if direction is missing
                     if (direction == '') {
                       if (type == 'EARNING' || type == 'LOAN')
                         direction = 'credit';
