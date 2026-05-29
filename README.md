@@ -58,7 +58,8 @@ This project was built as a capstone for an MBA in Fintech to demonstrate **Prod
 
 | Dashboard | Wallet | Analytics | Loans |
 
-| | | | |  
+<img width="720" height="1600" alt="WhatsApp Image 2026-05-29 at 10 03 28 AM" src="https://github.com/user-attachments/assets/c48ac441-327e-4ed5-bd4e-0f7d7b7f3779" />
+
 
 *(Note: Add screenshots of your app in the folder and link them here)*
 
@@ -83,5 +84,7 @@ This project was built as a capstone for an MBA in Fintech to demonstrate **Prod
 
 ## 📄 License
 This project is for educational purposes only as part of an MBA curriculum.
+PRD documents
+[GigWorker_PRD_v1.0.docx](https://github.com/user-attachments/files/28376360/GigWorker_PRD_v1.0.docx)
 
 **Developed by: Jayakumar L**
